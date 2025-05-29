@@ -2,6 +2,7 @@ import sys
 import os
 from neo4j import GraphDatabase
 from dotenv import load_dotenv
+import networkx as nx
 
 # carga de informacion dotenv
 load_dotenv()
@@ -17,6 +18,8 @@ driver = GraphDatabase.driver(uri, auth=(user_db, password_db))
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from app.services.recommendation_service import recommend_phones_for_user
+
+# Inicio de Sesion
 def verificar_login(tx, id, usuario):
     query = (
 
@@ -39,7 +42,6 @@ def login(usuario, id):
 def main():
     print("Bienvenido al Sistema de Recomendación de Teléfonos 📱")
     user_id = input("Ingrese su ID de usuario: ").strip()
-
     try:
         recomendaciones = recommend_phones_for_user(user_id)
 
@@ -51,6 +53,37 @@ def main():
                 print(f"{idx}. {phone}")
     except Exception as e:
         print("Error al obtener recomendaciones:", e)
+
+    G = nx.Digraph()
+
+    # Nodos
+    usuarios = ["U1", "U2"]
+    preferencias = ["buena cámara", "buena batería", "pantalla grande"]
+    caracteristicas = ["5000mAh", "6.7 pulgadas", "50MP"]
+    modelos = ["4000", "9000"]
+    marcas = ["Samsung", "Apple"]
+    
+    # Agregar nodos
+    G.add_nodes_from(usuarios + preferencias + caracteristicas + modelos + marcas)
+
+    # Aristas
+    G.add_edge("U1", "buena cámara", relation="prefiere")
+    G.add_edge("U1", "5000mAh", relation="prefiere")
+    G.add_edge("U1", "buena batería", relation="busca")
+    G.add_edge("U2", "pantalla grande", relation="busca")
+    G.add_edge("U2", "buena batería", relation="prefiere")
+
+    G.add_edge("4000", "Samsung", relation="es_de_la_marca")
+    G.add_edge("9000", "Apple", relation="es_de_la_marca")
+
+    G.add_edge("4000", "5000mAh", relation="tiene")
+    G.add_edge("4000", "50MP", relation="tiene")
+    G.add_edge("9000", "6.7 pulgadas", relation="tiene")
+
+    G.add_edge("5000mAh", "buena batería", relation="califica")
+    G.add_edge("6.7 pulgadas", "pantalla grande", relation="califica")
+    G.add_edge("50MP", "buena cámara", relation="califica")
+
 
 if __name__ == "__main__":
     main()
