@@ -7,6 +7,7 @@ from neo4j import GraphDatabase
 from dotenv import load_dotenv
 from app.services.user_service import create_user
 from app.services.rating_service import add_rating
+from app.services.preferences_service import create_user_preferences
 
 
 # Carga de variables de entorno
@@ -67,7 +68,7 @@ class PhoneRecommenderApp:
 
         tk.Button(self.root, text="Mostrar Recomendaciones", command=self.mostrar_recomendaciones).pack(pady=5)
         tk.Button(self.root, text="Crear/Actualizar Usuario", command=self.crear_usuario).pack(pady=2)
-        tk.Button(self.root, text="Crear Preferencias", command=self.funcion_no_implementada).pack(pady=2)
+        tk.Button(self.root, text="Crear Preferencias", command=self.definir_preferencias).pack(pady=2)
         tk.Button(self.root, text="Calificar Teléfono", command=self.calificar_telefono).pack(pady=2)
 
         # Contenedor de recomendaciones
@@ -112,9 +113,6 @@ class PhoneRecommenderApp:
 
         except Exception as e:
             messagebox.showerror("Error", f"Falló al obtener recomendaciones: {e}")
-
-    def funcion_no_implementada(self):
-        messagebox.showinfo("Info", "Esta funcionalidad aún no está implementada.")
         
     def crear_usuario(self):
         popup = tk.Toplevel(self.root)
@@ -202,6 +200,73 @@ class PhoneRecommenderApp:
             ventana.destroy()
 
         tk.Button(ventana, text="Guardar Calificación", command=guardar_calificacion).grid(row=5, columnspan=2, pady=10)
+        
+    def definir_preferencias(self):
+        ventana = tk.Toplevel(self.root)
+        ventana.title("Definir Preferencias")
+
+        # Campos de entrada
+        tk.Label(ventana, text="ID del Usuario:").grid(row=0, column=0)
+        user_id_entry = tk.Entry(ventana)
+        user_id_entry.grid(row=0, column=1)
+
+        # Opciones desplegables
+        opciones_disenio = ["small", "medium", "large"]
+        opciones_precio = ["low", "medium", "high"]
+        opciones_bateria = ["short", "medium", "long"]
+        opciones_camara = ["low", "medium", "high"]
+        opciones_software = ["Android", "iOS"]
+
+        # Campos de selección
+        def crear_selector(texto, opciones, fila):
+            tk.Label(ventana, text=texto).grid(row=fila, column=0)
+            var = tk.StringVar()
+            var.set(opciones[0])
+            menu = tk.OptionMenu(ventana, var, *opciones)
+            menu.grid(row=fila, column=1)
+            return var
+
+        diseño_var = crear_selector("Diseño:", opciones_disenio, 1)
+        precio_var = crear_selector("Rango de Precio:", opciones_precio, 2)
+        bateria_var = crear_selector("Batería:", opciones_bateria, 3)
+        camara_var = crear_selector("Cámara:", opciones_camara, 4)
+        software_var = crear_selector("Software:", opciones_software, 5)
+
+        tk.Label(ventana, text="Almacenamiento (número en GB):").grid(row=6, column=0)
+        almacenamiento_entry = tk.Entry(ventana)
+        almacenamiento_entry.grid(row=6, column=1)
+
+        tk.Label(ventana, text="Tamaño de Pantalla (por ejemplo 6.1):").grid(row=7, column=0)
+        pantalla_entry = tk.Entry(ventana)
+        pantalla_entry.grid(row=7, column=1)
+
+        def guardar_preferencias():
+            user_id = user_id_entry.get().strip()
+            try:
+                storage = int(almacenamiento_entry.get())
+                screen = float(pantalla_entry.get())
+            except ValueError:
+                messagebox.showerror("Error", "Almacenamiento y pantalla deben ser números.")
+                return
+
+            mensaje = create_user_preferences(
+                user_id=user_id,
+                preferences={
+                    "preferred_design": diseño_var.get(),
+                    "preferred_storage": storage,
+                    "preferred_price_range": precio_var.get(),
+                    "preferred_screen_size": screen,
+                    "preferred_software": software_var.get(),
+                    "preferred_battery": bateria_var.get(),
+                    "preferred_camera": camara_var.get(),
+                },
+                driver=self.driver
+            )
+            messagebox.showinfo("Resultado", mensaje)
+            ventana.destroy()
+
+        tk.Button(ventana, text="Guardar Preferencias", command=guardar_preferencias).grid(row=8, columnspan=2, pady=10)
+
 
 
 
