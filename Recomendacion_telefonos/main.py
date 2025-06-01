@@ -6,6 +6,7 @@ from tkinter import Frame, Label, Scrollbar, Canvas, VERTICAL, RIGHT, Y, BOTH
 from neo4j import GraphDatabase
 from dotenv import load_dotenv
 from app.services.user_service import create_user
+from app.services.rating_service import add_rating
 
 
 # Carga de variables de entorno
@@ -67,7 +68,7 @@ class PhoneRecommenderApp:
         tk.Button(self.root, text="Mostrar Recomendaciones", command=self.mostrar_recomendaciones).pack(pady=5)
         tk.Button(self.root, text="Crear/Actualizar Usuario", command=self.crear_usuario).pack(pady=2)
         tk.Button(self.root, text="Crear Preferencias", command=self.funcion_no_implementada).pack(pady=2)
-        tk.Button(self.root, text="Calificar Teléfono", command=self.funcion_no_implementada).pack(pady=2)
+        tk.Button(self.root, text="Calificar Teléfono", command=self.calificar_telefono).pack(pady=2)
 
         # Contenedor de recomendaciones
         self.canvas = Canvas(self.root)
@@ -141,6 +142,67 @@ class PhoneRecommenderApp:
             popup.destroy()
 
         tk.Button(popup, text="Crear Usuario", command=confirmar_creacion).pack(pady=15)
+        
+
+    def calificar_telefono(self):
+        ventana = tk.Toplevel(self.root)
+        ventana.title("Calificar Teléfono")
+
+        # Obtener todos los teléfonos disponibles
+        try:
+            with self.driver.session() as session:
+                result = session.run("MATCH (p:Phone) RETURN p.id AS id, p.name AS name ORDER BY p.name")
+                telefonos = result.data()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudieron cargar los teléfonos: {str(e)}")
+            return
+
+        if not telefonos:
+            messagebox.showinfo("Info", "No hay teléfonos registrados.")
+            return
+
+        # Mostrar lista numerada
+        lista_texto = "\n".join([f"{i+1}. {t['name']} (ID: {t['id']})" for i, t in enumerate(telefonos)])
+
+        tk.Label(ventana, text="ID del Usuario (ej. u1):").grid(row=0, column=0)
+        user_id_entry = tk.Entry(ventana)
+        user_id_entry.grid(row=0, column=1)
+
+        tk.Label(ventana, text="Selecciona un teléfono:").grid(row=1, column=0, sticky="w")
+        tk.Label(ventana, text=lista_texto, justify="left").grid(row=2, column=0, columnspan=2, sticky="w")
+
+        tk.Label(ventana, text="Número de la lista:").grid(row=3, column=0)
+        seleccion_entry = tk.Entry(ventana)
+        seleccion_entry.grid(row=3, column=1)
+
+        tk.Label(ventana, text="Estrellas (1 a 5):").grid(row=4, column=0)
+        stars_entry = tk.Entry(ventana)
+        stars_entry.grid(row=4, column=1)
+
+        def guardar_calificacion():
+            user_id = user_id_entry.get().strip()
+            try:
+                index = int(seleccion_entry.get()) - 1
+                stars = float(stars_entry.get())
+            except ValueError:
+                messagebox.showerror("Error", "Por favor ingresa valores válidos.")
+                return
+
+            if index < 0 or index >= len(telefonos):
+                messagebox.showerror("Error", "Número de teléfono inválido.")
+                return
+
+            if stars < 1 or stars > 5:
+                messagebox.showerror("Error", "La calificación debe estar entre 1 y 5.")
+                return
+
+            phone_id = telefonos[index]['id']
+            mensaje = add_rating(user_id, phone_id, stars, self.driver)
+            messagebox.showinfo("Resultado", mensaje)
+            ventana.destroy()
+
+        tk.Button(ventana, text="Guardar Calificación", command=guardar_calificacion).grid(row=5, columnspan=2, pady=10)
+
 
 
 
