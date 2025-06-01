@@ -1,10 +1,7 @@
-from neo4j import Driver
 from typing import List, Dict
-from app.db.neo4j_connection import get_neo4j_driver
+from neo4j import Driver
 
-def recommend_phones_for_user(user_id: str) -> List[Dict]:
-    driver: Driver = get_neo4j_driver()
-
+def recommend_phones_for_user(user_id: str, driver: Driver) -> List[Dict]:
     with driver.session() as session:
         query = """
         MATCH (u:User {id: $user_id})-[:HAS_PREFERENCES]->(pref:Preferences)
