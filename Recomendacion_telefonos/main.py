@@ -145,7 +145,8 @@ class PhoneRecommenderApp:
     def calificar_telefono(self):
         ventana = tk.Toplevel(self.root)
         ventana.title("Calificar Teléfono")
-
+        ventana.geometry("500x400")  # Tamaño fijo para la ventana
+        
         # Obtener todos los teléfonos disponibles
         try:
             with self.driver.session() as session:
@@ -159,48 +160,105 @@ class PhoneRecommenderApp:
             messagebox.showinfo("Info", "No hay teléfonos registrados.")
             return
 
-        # Mostrar lista numerada
-        lista_texto = "\n".join([f"{i+1}. {t['name']} (ID: {t['id']})" for i, t in enumerate(telefonos)])
+        # Frame principal
+        main_frame = Frame(ventana)
+        main_frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
+        
+        # Campos de entrada en la parte superior
+        tk.Label(main_frame, text="ID del Usuario (ej. u1):").pack(anchor="w")
+        user_id_entry = tk.Entry(main_frame, width=30)
+        user_id_entry.pack(anchor="w", pady=(0, 10))
 
-        tk.Label(ventana, text="ID del Usuario (ej. u1):").grid(row=0, column=0)
-        user_id_entry = tk.Entry(ventana)
-        user_id_entry.grid(row=0, column=1)
-
-        tk.Label(ventana, text="Selecciona un teléfono:").grid(row=1, column=0, sticky="w")
-        tk.Label(ventana, text=lista_texto, justify="left").grid(row=2, column=0, columnspan=2, sticky="w")
-
-        tk.Label(ventana, text="Número de la lista:").grid(row=3, column=0)
-        seleccion_entry = tk.Entry(ventana)
-        seleccion_entry.grid(row=3, column=1)
-
-        tk.Label(ventana, text="Estrellas (1 a 5):").grid(row=4, column=0)
-        stars_entry = tk.Entry(ventana)
-        stars_entry.grid(row=4, column=1)
-
+        tk.Label(main_frame, text="Selecciona un teléfono:", font=("Arial", 10, "bold")).pack(anchor="w")
+        
+        # Frame para el área con scroll
+        scroll_frame = Frame(main_frame)
+        scroll_frame.pack(fill=BOTH, expand=True, pady=(5, 10))
+        
+        # Canvas y scrollbar para la lista de teléfonos
+        canvas = Canvas(scroll_frame, height=200)
+        scrollbar = Scrollbar(scroll_frame, orient=VERTICAL, command=canvas.yview)
+        scrollable_phone_frame = Frame(canvas)
+        
+        scrollable_phone_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_phone_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Variable para almacenar la selección
+        seleccion_var = tk.StringVar()
+        
+        # Crear radio buttons para cada teléfono
+        for i, telefono in enumerate(telefonos):
+            radio_frame = Frame(scrollable_phone_frame)
+            radio_frame.pack(fill="x", padx=5, pady=2)
+            
+            radio_btn = tk.Radiobutton(
+                radio_frame, 
+                text=f"{telefono['name']} (ID: {telefono['id']})",
+                variable=seleccion_var,
+                value=str(i),
+                wraplength=400,
+                justify="left"
+            )
+            radio_btn.pack(anchor="w")
+        
+        # Configurar el scroll con la rueda del mouse
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        canvas.bind("<MouseWheel>", _on_mousewheel)
+        
+        # Empaquetar canvas y scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Frame para la calificación
+        rating_frame = Frame(main_frame)
+        rating_frame.pack(fill="x", pady=(0, 10))
+        
+        tk.Label(rating_frame, text="Calificación (1 a 5 estrellas):").pack(anchor="w")
+        stars_entry = tk.Entry(rating_frame, width=10)
+        stars_entry.pack(anchor="w")
+        
+        # Función para guardar la calificación
         def guardar_calificacion():
             user_id = user_id_entry.get().strip()
+            seleccion = seleccion_var.get()
+            
+            if not user_id:
+                messagebox.showerror("Error", "Por favor ingresa el ID del usuario.")
+                return
+                
+            if not seleccion:
+                messagebox.showerror("Error", "Por favor selecciona un teléfono.")
+                return
+            
             try:
-                index = int(seleccion_entry.get()) - 1
                 stars = float(stars_entry.get())
             except ValueError:
-                messagebox.showerror("Error", "Por favor ingresa valores válidos.")
-                return
-
-            if index < 0 or index >= len(telefonos):
-                messagebox.showerror("Error", "Número de teléfono inválido.")
+                messagebox.showerror("Error", "Por favor ingresa una calificación válida.")
                 return
 
             if stars < 1 or stars > 5:
                 messagebox.showerror("Error", "La calificación debe estar entre 1 y 5.")
                 return
 
-            phone_id = telefonos[index]['id']
-            mensaje = add_rating(user_id, phone_id, stars, self.driver)
-            messagebox.showinfo("Resultado", mensaje)
-            ventana.destroy()
+            try:
+                index = int(seleccion)
+                phone_id = telefonos[index]['id']
+                mensaje = add_rating(user_id, phone_id, stars, self.driver)
+                messagebox.showinfo("Resultado", mensaje)
+                ventana.destroy()
+            except (ValueError, IndexError):
+                messagebox.showerror("Error", "Selección de teléfono inválida.")
 
-        tk.Button(ventana, text="Guardar Calificación", command=guardar_calificacion).grid(row=5, columnspan=2, pady=10)
-        
+        # Botón para guardar
+        tk.Button(main_frame, text="Guardar Calificación", command=guardar_calificacion, 
+                bg="#4CAF50", fg="white", font=("Arial", 10, "bold")).pack(pady=10)        
     def definir_preferencias(self):
         ventana = tk.Toplevel(self.root)
         ventana.title("Definir Preferencias")
