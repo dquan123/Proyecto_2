@@ -1,5 +1,3 @@
-from neo4j import Driver
-from typing import List, Dict
 from app.db.neo4j_connection import get_neo4j_driver
 
 def recommend_phones_for_user(user_id: str):
