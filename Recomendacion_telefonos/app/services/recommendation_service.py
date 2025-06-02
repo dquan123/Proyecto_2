@@ -1,7 +1,6 @@
 from app.db.neo4j_connection import get_neo4j_driver
 
-def recommend_phones_for_user(user_id: str):
-    driver = get_neo4j_driver()
+def recommend_phones_for_user(user_id: str, driver):
     with driver.session() as session:
         query = """
         MATCH (u:User {id: $user_id})-[:HAS_PREFERENCES]->(pref:Preferences)

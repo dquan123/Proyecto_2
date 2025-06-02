@@ -95,7 +95,7 @@ class PhoneRecommenderApp:
             widget.destroy()
 
         try:
-            recomendaciones = recommend_phones_for_user(user_id)
+            recomendaciones = recommend_phones_for_user(user_id, self.driver)
 
             if not recomendaciones:
                 tk.Label(self.scrollable_frame, text="No se encontraron recomendaciones para este usuario.").pack()
